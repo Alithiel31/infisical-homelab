@@ -1,52 +1,58 @@
-# Infisical — gestionnaire de secrets centralisé (homelab self-hosted)
+*[Version française](README.fr.md)*
 
-## Vue d'ensemble
+# Infisical — self-hosted centralized secrets manager (homelab)
 
-Instance auto-hébergée d'[Infisical](https://infisical.com/) sur un Raspberry Pi 5 faisant office de homelab, destinée à devenir le gestionnaire de secrets centralisé pour l'ensemble des projets (à la place de fichiers `.env` épars par projet).
+## Overview
 
-- **État** : déployé et opérationnel, compte administrateur créé.
-- **Accès** : via un tunnel Tailscale privé, sur un port dédié — pas d'exposition publique.
+Self-hosted [Infisical](https://infisical.com/) instance running on a Raspberry Pi 5 homelab, meant to become the centralized secrets manager for all projects (replacing scattered per-project `.env` files).
+
+- **Status**: deployed and operational, admin account created.
+- **Access**: through a private Tailscale tunnel, on a dedicated port — no public exposure.
 
 ## Architecture
 
-Deux conteneurs, réseau Docker par défaut (pas de réseau custom, pas de reverse proxy pour l'instant) :
+Two containers, default Docker network (no custom network, no reverse proxy at this stage):
 
-| Service | Image | Port hôte | Rôle |
+| Service | Image | Host port | Role |
 |---|---|---|---|
-| `infisical` | `infisical/infisical:latest` | exposé uniquement en interne au tunnel privé | Application principale |
-| `infisical-redis` | `redis:7-alpine` | *(aucun, interne uniquement)* | Cache / queue interne |
+| `infisical` | `infisical/infisical:latest` | only exposed inside the private tunnel | Main application |
+| `infisical-redis` | `redis:7-alpine` | *(none, internal only)* | Internal cache / queue |
 
-- **Base de données** : PostgreSQL **mutualisé**, déjà en place sur l'hôte (pas de conteneur Postgres dédié), base et user applicatif dédiés.
-  - Connexion via la passerelle du bridge Docker par défaut (pas de réseau custom, donc pas besoin d'`extra_hosts` / réseau dédié).
-  - ⚠️ À vérifier : règle firewall autorisant le sous-réseau du bridge Docker par défaut vers le port Postgres, sinon la connexion timeout silencieusement.
-- **Redis** : pas de port exposé côté hôte, joignable uniquement par `infisical` via le réseau interne du compose.
-- **Volumes** : aucun volume déclaré — cohérent car tout l'état persistant (secrets, configuration) vit dans le Postgres externe ; Redis n'est qu'un cache, sa perte au redémarrage n'est pas un problème.
+- **Database**: a **shared** PostgreSQL instance already running on the host (no dedicated Postgres container), with a dedicated database and application user.
+  - Connects through the default Docker bridge gateway (no custom network, so no need for `extra_hosts` / a dedicated network).
+  - ⚠️ To check: firewall rule allowing the default Docker bridge subnet to reach the Postgres port, otherwise the connection silently times out.
+- **Redis**: no host port exposed, only reachable by `infisical` over the compose's internal network.
+- **Volumes**: none declared — expected, since all persistent state (secrets, config) lives in the external Postgres instance; Redis is just a cache, losing it on restart is not an issue.
 
-## Réseau / routage
+## Networking / routing
 
-- Actuellement accès direct via Tailscale uniquement, sans reverse proxy.
-- Le compose contient un bloc commenté prêt à activer pour router plus tard via un reverse proxy (Traefik ou équivalent), avec un sous-domaine interne dédié.
+- Currently direct access via Tailscale only, no reverse proxy in front.
+- The compose file has a commented-out block ready to enable routing through a reverse proxy (Traefik or similar) later, with a dedicated internal subdomain.
 
-## Variables d'environnement (`.env`, non commité — voir `.gitignore` et `.env.example`)
+## Environment variables (`.env`, not committed — see `.gitignore` and `.env.example`)
 
 | Variable | Description |
 |---|---|
-| `DB_PASSWORD` | Mot de passe du user Postgres applicatif |
-| `DB_HOST` | Adresse de connexion au Postgres mutualisé |
-| `ENCRYPTION_KEY` | Clé de chiffrement Infisical (secrets au repos) — **critique, ne jamais perdre ni faire fuiter** |
-| `AUTH_SECRET` | Secret de signature des sessions/JWT |
+| `DB_PASSWORD` | Password for the Postgres application user |
+| `DB_HOST` | Connection address to the shared Postgres instance |
+| `ENCRYPTION_KEY` | Infisical encryption key (secrets at rest) — **critical, never lose or leak it** |
+| `AUTH_SECRET` | Session/JWT signing secret |
 
-Voir `.env.example` pour le gabarit à copier.
+See `.env.example` for the template to copy.
 
-## Procédures courantes
+## Common operations
 
-- **Démarrage / mise à jour** : `docker compose up -d` (le tag `latest` sur l'image peut faire monter de version sans avertissement — à surveiller).
-- **Logs** : `docker logs -f infisical`
-- **Arrêt** : `docker compose down` (ne supprime pas les données, tout est dans le Postgres externe).
+- **Start / update**: `docker compose up -d` (the `latest` tag on the image means `docker compose pull && docker compose up -d` can bump the version without warning — worth watching).
+- **Logs**: `docker logs -f infisical`
+- **Stop**: `docker compose down` (does not delete data, everything lives in the external Postgres instance).
 
-## Points de vigilance / TODO
+## Known caveats / TODO
 
-1. **Sauvegarde** : `ENCRYPTION_KEY` et `AUTH_SECRET` n'ont, à ce jour, aucune copie de sauvegarde en dehors du `.env` local. Une perte de ce fichier rendrait les secrets stockés dans Postgres illisibles. À stocker dans un second endroit sûr.
-2. **Tag `latest`** : épingler une version précise plutôt que `latest` pour éviter une mise à jour surprise en production.
-3. **Reverse proxy** : décision à prendre selon l'avancement de la mutualisation des autres projets.
-4. **Migration des secrets existants** : les autres projets utilisant encore des `.env` locaux ne sont pas encore migrés vers Infisical.
+1. **Backup**: `ENCRYPTION_KEY` and `AUTH_SECRET` currently have no known backup outside the local `.env` file. Losing that file would make the secrets stored in Postgres unreadable. Should be stored in a second safe location.
+2. **`latest` tag**: pin an exact version instead of `latest` to avoid a surprise upgrade in production.
+3. **Reverse proxy**: decision still open, depending on how the mutualization effort for other projects progresses.
+4. **Migrating existing secrets**: other projects still using local `.env` files haven't been migrated to Infisical yet.
+
+## License
+
+[MIT](LICENSE)
