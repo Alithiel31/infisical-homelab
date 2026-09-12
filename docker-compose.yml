@@ -1,0 +1,36 @@
+services:
+  infisical:
+    image: infisical/infisical:latest
+    container_name: infisical
+    restart: unless-stopped
+    ports:
+      - "8090:8080"
+    env_file:
+      - .env
+    environment:
+      - DB_CONNECTION_URI=postgresql://infisical_app:${DB_PASSWORD}@${DB_HOST}:5432/infisical
+      - REDIS_URL=redis://infisical-redis:6379
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - AUTH_SECRET=${AUTH_SECRET}
+      - SITE_URL=http://caesura.tailb8daf5.ts.net:8090
+      - NODE_ENV=production
+    depends_on:
+      - infisical-redis
+    # Pas de réseau traefik-net ici : accès direct via Tailscale uniquement.
+    # Si tu veux router via Traefik plus tard (nom court sans port), ajoute :
+    # networks:
+    #   - traefik-net
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.infisical.rule=Host(`vault.caesura.tailb8daf5.ts.net`)"
+    #   - "traefik.http.services.infisical.loadbalancer.server.port=8080"
+
+  infisical-redis:
+    image: redis:7-alpine
+    container_name: infisical-redis
+    restart: unless-stopped
+    # Pas de port exposé sur l'hôte : uniquement accessible par infisical via le réseau interne du compose
+
+# networks:
+#   traefik-net:
+#     external: true

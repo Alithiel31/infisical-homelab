@@ -1,0 +1,11 @@
+.env
+
+# Notes privées avec infos d'infra réelles (Tailscale, hostnames) — jamais commitées
+NOTES-caesura.md
+
+# OS / editeur
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
