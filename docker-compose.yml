@@ -34,3 +34,10 @@ services:
 # networks:
 #   traefik-net:
 #     external: true
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: mailpit
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+    # SMTP interne (port 1025) consommé par infisical ; UI web (8025) accessible via Tailscale pour lire l'email de reset
