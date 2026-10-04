@@ -37,6 +37,7 @@ Two containers, default Docker network (no custom network, no reverse proxy at t
 | `DB_HOST` | Connection address to the shared Postgres instance |
 | `ENCRYPTION_KEY` | Infisical encryption key (secrets at rest) — **critical, never lose or leak it** |
 | `AUTH_SECRET` | Session/JWT signing secret |
+| `INFISICAL_SITE_URL` | Public URL of Infisical (Tailscale address), e.g. `http://caesura.<tailnet>.ts.net:8090` |
 
 See `.env.example` for the template to copy.
 

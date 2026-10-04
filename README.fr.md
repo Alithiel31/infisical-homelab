@@ -37,6 +37,7 @@ Deux conteneurs, réseau Docker par défaut (pas de réseau custom, pas de rever
 | `DB_HOST` | Adresse de connexion au Postgres mutualisé |
 | `ENCRYPTION_KEY` | Clé de chiffrement Infisical (secrets au repos) — **critique, ne jamais perdre ni faire fuiter** |
 | `AUTH_SECRET` | Secret de signature des sessions/JWT |
+| `INFISICAL_SITE_URL` | URL d'accès à Infisical (adresse Tailscale), ex. `http://caesura.<tailnet>.ts.net:8090` |
 
 Voir `.env.example` pour le gabarit à copier.
 

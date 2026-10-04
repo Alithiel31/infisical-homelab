@@ -15,7 +15,7 @@ services:
       - REDIS_URL=redis://infisical-redis:6379
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - AUTH_SECRET=${AUTH_SECRET}
-      - SITE_URL=http://caesura.tailb8daf5.ts.net:8090
+      - SITE_URL=${INFISICAL_SITE_URL}
       - NODE_ENV=production
     depends_on:
       - infisical-redis
@@ -25,7 +25,7 @@ services:
     #   - traefik-net
     # labels:
     #   - "traefik.enable=true"
-    #   - "traefik.http.routers.infisical.rule=Host(`vault.caesura.tailb8daf5.ts.net`)"
+    #   - "traefik.http.routers.infisical.rule=Host(`vault.caesura.<tailnet>.ts.net`)"
     #   - "traefik.http.services.infisical.loadbalancer.server.port=8080"
 
   infisical-redis:
