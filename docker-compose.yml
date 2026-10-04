@@ -1,10 +1,13 @@
 services:
   infisical:
-    image: infisical/infisical:latest
+    image: infisical/infisical@sha256:204bd63c7a281d9157752ce0bf8d506e7380cac5a0665324eeab8d580b069266  # figé le 2026-09-30
     container_name: infisical
+    labels:
+      - "homelab.tier=infra"
     restart: unless-stopped
     ports:
-      - "8090:8080"
+      - "127.0.0.1:8090:8080"
+      - "100.109.50.124:8090:8080"
     env_file:
       - .env
     environment:
@@ -28,6 +31,9 @@ services:
   infisical-redis:
     image: redis:7-alpine
     container_name: infisical-redis
+    labels:
+      - "homelab.tier=infra"
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
     restart: unless-stopped
     # Pas de port exposé sur l'hôte : uniquement accessible par infisical via le réseau interne du compose
 
@@ -35,9 +41,12 @@ services:
 #   traefik-net:
 #     external: true
   mailpit:
-    image: axllent/mailpit:latest
+    image: axllent/mailpit@sha256:74d609a42ec279aa63c6b4622a6fa9b5408d1ad5b1d76a1c4be40a265ce0863d  # figé le 2026-09-30
     container_name: mailpit
+    labels:
+      - "homelab.tier=infra"
     restart: unless-stopped
     ports:
-      - "8025:8025"
+      - "127.0.0.1:8025:8025"
+      - "100.109.50.124:8025:8025"
     # SMTP interne (port 1025) consommé par infisical ; UI web (8025) accessible via Tailscale pour lire l'email de reset
