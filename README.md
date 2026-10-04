@@ -13,9 +13,9 @@ Three containers, default Docker network (no custom network, no reverse proxy at
 
 | Service | Image | Host port | Role |
 |---|---|---|---|
-| `infisical` | `infisical/infisical`, pinned by digest | `8090` → `8080`, bound to localhost and to the host's Tailscale address only | Main application |
+| `infisical` | `infisical/infisical`, pinned by digest | `8090` → `8080`, bound to localhost and to `TAILSCALE_IP` only | Main application |
 | `infisical-redis` | `redis:7-alpine` | *(none, internal only)* | Internal cache / queue (persistence disabled) |
-| `mailpit` | `axllent/mailpit`, pinned by digest | `8025` (web UI), bound to localhost and to the Tailscale address only | Local SMTP sink (port `1025`) — lets you read e.g. password-reset emails |
+| `mailpit` | `axllent/mailpit`, pinned by digest | `8025` (web UI), bound to localhost and to `TAILSCALE_IP` only | Local SMTP sink (port `1025`), already wired to Infisical (`SMTP_*` set in the compose) — lets you read e.g. password-reset emails |
 
 - **Database**: a **shared** PostgreSQL instance already running on the host (no dedicated Postgres container), with a dedicated database (`infisical`) and application user (`infisical_app`).
   - Connects through the default Docker bridge gateway (no custom network, so no need for `extra_hosts` / a dedicated network).
@@ -53,7 +53,9 @@ Three containers, default Docker network (no custom network, no reverse proxy at
 | `DB_HOST` | Connection address to the shared Postgres instance (default Docker bridge gateway, usually `172.17.0.1`; check with `docker network inspect bridge`) |
 | `ENCRYPTION_KEY` | Infisical encryption key (secrets at rest) — **critical, never lose or leak it**. Generate with `openssl rand -hex 16` |
 | `AUTH_SECRET` | Session/JWT signing secret. Generate with `openssl rand -base64 32` |
-| `INFISICAL_SITE_URL` | URL of Infisical (Tailscale address), e.g. `http://caesura.<tailnet>.ts.net:8090` |
+| `INFISICAL_SITE_URL` | URL of Infisical (Tailscale address), e.g. `http://<hostname>.<tailnet>.ts.net:8090` |
+| `TAILSCALE_IP` | Tailscale IPv4 address of the host (`tailscale ip -4`); Infisical (`8090`) and Mailpit (`8025`) are published only on it and on localhost |
+| `SMTP_FROM_ADDRESS` | *(optional)* sender address of Infisical emails (default `infisical@homelab.internal`) |
 
 ## Common operations
 
@@ -74,9 +76,8 @@ Projects authenticate with a **Machine Identity** (Universal Auth) and the [Infi
 ## Known caveats / TODO
 
 1. **Backup**: `ENCRYPTION_KEY` and `AUTH_SECRET` currently have no known backup outside the local `.env` file. Losing that file would make the secrets stored in Postgres unreadable. Should be stored in a second safe location. The `infisical` database should also be part of the Postgres backups.
-2. **SMTP**: `mailpit` is deployed but the SMTP variables Infisical needs to use it are not part of `.env.example`; document or add them.
-3. **Reverse proxy**: decision still open, depending on how the mutualization effort for other projects progresses. The compose file has a commented-out block ready to enable routing through [Traefik](https://github.com/Alithiel31/traefik-homelab) later, with a dedicated internal subdomain.
-4. **Migrating existing secrets**: other projects still using local `.env` files haven't been migrated to Infisical yet.
+2. **Reverse proxy**: decision still open, depending on how the mutualization effort for other projects progresses. The compose file has a commented-out block ready to enable routing through [Traefik](https://github.com/Alithiel31/traefik-homelab) later, with a dedicated internal subdomain.
+3. **Migrating existing secrets**: other projects still using local `.env` files haven't been migrated to Infisical yet.
 
 ## License
 

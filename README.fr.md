@@ -13,9 +13,9 @@ Trois conteneurs, réseau Docker par défaut (pas de réseau custom, pas de reve
 
 | Service | Image | Port hôte | Rôle |
 |---|---|---|---|
-| `infisical` | `infisical/infisical`, épinglée par digest | `8090` → `8080`, lié à localhost et à l'adresse Tailscale de l'hôte uniquement | Application principale |
+| `infisical` | `infisical/infisical`, épinglée par digest | `8090` → `8080`, lié à localhost et à `TAILSCALE_IP` uniquement | Application principale |
 | `infisical-redis` | `redis:7-alpine` | *(aucun, interne uniquement)* | Cache / queue interne (persistance désactivée) |
-| `mailpit` | `axllent/mailpit`, épinglée par digest | `8025` (interface web), lié à localhost et à l'adresse Tailscale uniquement | Puits SMTP local (port `1025`) — permet de lire par ex. les emails de réinitialisation de mot de passe |
+| `mailpit` | `axllent/mailpit`, épinglée par digest | `8025` (interface web), lié à localhost et à `TAILSCALE_IP` uniquement | Puits SMTP local (port `1025`), déjà branché sur Infisical (`SMTP_*` définies dans le compose) — permet de lire par ex. les emails de réinitialisation de mot de passe |
 
 - **Base de données** : PostgreSQL **mutualisé**, déjà en place sur l'hôte (pas de conteneur Postgres dédié), base (`infisical`) et user applicatif (`infisical_app`) dédiés.
   - Connexion via la passerelle du bridge Docker par défaut (pas de réseau custom, donc pas besoin d'`extra_hosts` / réseau dédié).
@@ -53,7 +53,9 @@ Trois conteneurs, réseau Docker par défaut (pas de réseau custom, pas de reve
 | `DB_HOST` | Adresse de connexion au Postgres mutualisé (passerelle du bridge Docker par défaut, en général `172.17.0.1` ; à vérifier avec `docker network inspect bridge`) |
 | `ENCRYPTION_KEY` | Clé de chiffrement Infisical (secrets au repos) — **critique, ne jamais perdre ni faire fuiter**. Génération : `openssl rand -hex 16` |
 | `AUTH_SECRET` | Secret de signature des sessions/JWT. Génération : `openssl rand -base64 32` |
-| `INFISICAL_SITE_URL` | URL d'accès à Infisical (adresse Tailscale), ex. `http://caesura.<tailnet>.ts.net:8090` |
+| `INFISICAL_SITE_URL` | URL d'accès à Infisical (adresse Tailscale), ex. `http://<hostname>.<tailnet>.ts.net:8090` |
+| `TAILSCALE_IP` | Adresse IPv4 Tailscale de l'hôte (`tailscale ip -4`) ; Infisical (`8090`) et Mailpit (`8025`) ne sont publiés que sur elle et sur localhost |
+| `SMTP_FROM_ADDRESS` | *(optionnel)* adresse d'expéditeur des emails d'Infisical (défaut `infisical@homelab.internal`) |
 
 ## Procédures courantes
 
@@ -74,9 +76,8 @@ Les projets s'authentifient avec une **Machine Identity** (Universal Auth) et la
 ## Points de vigilance / TODO
 
 1. **Sauvegarde** : `ENCRYPTION_KEY` et `AUTH_SECRET` n'ont, à ce jour, aucune copie de sauvegarde en dehors du `.env` local. Une perte de ce fichier rendrait les secrets stockés dans Postgres illisibles. À stocker dans un second endroit sûr. La base `infisical` doit aussi faire partie des sauvegardes Postgres.
-2. **SMTP** : `mailpit` est déployé mais les variables SMTP dont Infisical a besoin pour l'utiliser ne figurent pas dans `.env.example` ; à documenter ou ajouter.
-3. **Reverse proxy** : décision à prendre selon l'avancement de la mutualisation des autres projets. Le compose contient un bloc commenté prêt à activer pour router plus tard via [Traefik](https://github.com/Alithiel31/traefik-homelab), avec un sous-domaine interne dédié.
-4. **Migration des secrets existants** : les autres projets utilisant encore des `.env` locaux ne sont pas encore migrés vers Infisical.
+2. **Reverse proxy** : décision à prendre selon l'avancement de la mutualisation des autres projets. Le compose contient un bloc commenté prêt à activer pour router plus tard via [Traefik](https://github.com/Alithiel31/traefik-homelab), avec un sous-domaine interne dédié.
+3. **Migration des secrets existants** : les autres projets utilisant encore des `.env` locaux ne sont pas encore migrés vers Infisical.
 
 ## Licence
 
