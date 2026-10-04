@@ -33,14 +33,18 @@ Three containers, default Docker network (no custom network, no reverse proxy at
 ## Installation
 
 1. **Create the database and user** on the host Postgres (as an admin user):
+
    ```sql
    CREATE USER infisical_app WITH PASSWORD 'a-strong-password';
    CREATE DATABASE infisical OWNER infisical_app;
    ```
+
    Allow the Docker bridge subnet in `pg_hba.conf` (adjust the subnet if needed), then reload Postgres:
-   ```
+
+   ```text
    host    infisical    infisical_app    172.17.0.0/16    scram-sha-256
    ```
+
 2. **Open the firewall** for that subnet towards the Postgres port (e.g. `ufw allow from 172.17.0.0/16 to any port 5432 proto tcp`).
 3. **Configure**: `cp .env.example .env`, then fill in the values (see below).
 4. **Start**: `docker compose up -d`, then open `INFISICAL_SITE_URL` and create the admin account.

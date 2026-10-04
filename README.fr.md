@@ -33,14 +33,18 @@ Trois conteneurs, réseau Docker par défaut (pas de réseau custom, pas de reve
 ## Installation
 
 1. **Créer la base et l'utilisateur** sur le Postgres de l'hôte (en tant qu'admin) :
+
    ```sql
    CREATE USER infisical_app WITH PASSWORD 'un-mot-de-passe-fort';
    CREATE DATABASE infisical OWNER infisical_app;
    ```
+
    Autoriser le sous-réseau du bridge Docker dans `pg_hba.conf` (adapter le sous-réseau si besoin), puis recharger Postgres :
-   ```
+
+   ```text
    host    infisical    infisical_app    172.17.0.0/16    scram-sha-256
    ```
+
 2. **Ouvrir le pare-feu** pour ce sous-réseau vers le port Postgres (ex. `ufw allow from 172.17.0.0/16 to any port 5432 proto tcp`).
 3. **Configurer** : `cp .env.example .env`, puis renseigner les valeurs (voir ci-dessous).
 4. **Démarrer** : `docker compose up -d`, puis ouvrir `INFISICAL_SITE_URL` et créer le compte administrateur.
