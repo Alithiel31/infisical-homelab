@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:8090:8080"
-      - "100.109.50.124:8090:8080"
+      - "${TAILSCALE_IP:?TAILSCALE_IP manquant dans .env}:8090:8080"
     env_file:
       - .env
     environment:
@@ -17,15 +17,22 @@ services:
       - AUTH_SECRET=${AUTH_SECRET}
       - SITE_URL=${INFISICAL_SITE_URL}
       - NODE_ENV=production
+      # SMTP : Mailpit (puits local, sans authentification ni TLS)
+      - SMTP_HOST=mailpit
+      - SMTP_PORT=1025
+      - SMTP_IGNORE_TLS=true
+      - SMTP_FROM_ADDRESS=${SMTP_FROM_ADDRESS:-infisical@homelab.internal}
+      - SMTP_FROM_NAME=Infisical
     depends_on:
       - infisical-redis
+      - mailpit
     # Pas de réseau traefik-net ici : accès direct via Tailscale uniquement.
     # Si tu veux router via Traefik plus tard (nom court sans port), ajoute :
     # networks:
     #   - traefik-net
     # labels:
     #   - "traefik.enable=true"
-    #   - "traefik.http.routers.infisical.rule=Host(`vault.caesura.<tailnet>.ts.net`)"
+    #   - "traefik.http.routers.infisical.rule=Host(`vault.<hostname>.<tailnet>.ts.net`)"
     #   - "traefik.http.services.infisical.loadbalancer.server.port=8080"
 
   infisical-redis:
@@ -37,9 +44,6 @@ services:
     restart: unless-stopped
     # Pas de port exposé sur l'hôte : uniquement accessible par infisical via le réseau interne du compose
 
-# networks:
-#   traefik-net:
-#     external: true
   mailpit:
     image: axllent/mailpit@sha256:74d609a42ec279aa63c6b4622a6fa9b5408d1ad5b1d76a1c4be40a265ce0863d  # figé le 2026-09-30
     container_name: mailpit
@@ -48,5 +52,9 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:8025:8025"
-      - "100.109.50.124:8025:8025"
+      - "${TAILSCALE_IP:?TAILSCALE_IP manquant dans .env}:8025:8025"
     # SMTP interne (port 1025) consommé par infisical ; UI web (8025) accessible via Tailscale pour lire l'email de reset
+
+# networks:
+#   traefik-net:
+#     external: true
