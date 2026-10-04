@@ -2,6 +2,8 @@
 
 [Version française](README.fr.md)
 
+[![Lint Markdown](https://github.com/Alithiel31/infisical-homelab/actions/workflows/lint-markdown.yml/badge.svg?branch=master)](https://github.com/Alithiel31/infisical-homelab/actions/workflows/lint-markdown.yml) [![License: MIT](https://img.shields.io/github/license/Alithiel31/infisical-homelab)](LICENSE) ![Raspberry Pi 5](https://img.shields.io/badge/Raspberry%20Pi-5-C51A4A?logo=raspberrypi&logoColor=white) ![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white) [![Infisical](https://img.shields.io/badge/Infisical-self--hosted-4CAF50?logo=infisical&logoColor=white)](https://infisical.com/)
+
 Self-hosted [Infisical](https://infisical.com/) instance running on a Raspberry Pi 5 homelab, meant to be the centralized secrets manager for all projects (replacing scattered per-project `.env` files).
 
 - **Status**: deployed and operational, admin account created. First consumer: [woodpecker-ci-homelab](https://github.com/Alithiel31/woodpecker-ci-homelab).
@@ -23,6 +25,52 @@ Three containers, default Docker network (no custom network, no reverse proxy at
 - **Redis**: no host port exposed, only reachable by `infisical` over the compose's internal network.
 - **Volumes**: none declared — expected, since all persistent state (secrets, config) lives in the external Postgres instance; Redis is only a cache, losing it on restart is not an issue.
 - **Images** are pinned by digest (`sha256:…`), with the pinning date in a comment in `docker-compose.yml`.
+
+## Homelab architecture
+
+Where this project sits in the homelab (highlighted):
+
+```mermaid
+flowchart LR
+    client(["Client<br/>(Tailscale VPN)"])
+    internet(["Internet"])
+    cf["Cloudflare Tunnel<br/>(optional, public services)"]
+    subgraph pi ["Raspberry Pi 5 — Docker"]
+        traefik["Traefik :8000"]
+        subgraph ci ["ci-net"]
+            gitea["Gitea"]
+            wps["Woodpecker Server"]
+            wpa["Woodpecker Agent"]
+        end
+        plantuml["PlantUML"]
+        subgraph vault ["Infisical stack"]
+            infisical["Infisical :8090"]
+            redis[("Redis")]
+            mailpit["Mailpit"]
+        end
+    end
+    pg[("PostgreSQL<br/>native, shared")]
+
+    client -->|"hosts file"| traefik
+    internet -.-> cf -.-> traefik
+    traefik --> gitea & wps & plantuml
+    gitea <-->|OAuth2| wps
+    wps -->|"gRPC :9000"| wpa
+    gitea & wps & infisical --> pg
+    infisical --> redis & mailpit
+    client -->|"Tailscale"| infisical
+    infisical -.->|"secrets at deploy time"| ci
+
+    classDef current fill:#fff3b0,stroke:#d97706,stroke-width:3px,color:#000
+    class infisical,redis,mailpit current
+```
+
+## Design choices
+
+- One secrets manager instead of one `.env` file per project; consumers authenticate with a Machine Identity and receive secrets at deploy time.
+- Shared native PostgreSQL rather than a dedicated database container, to keep the footprint small on a Raspberry Pi.
+- Images pinned by digest, so the stack never changes without an explicit decision.
+- Reachable only over Tailscale: no public route, no reverse proxy needed.
 
 ## Prerequisites
 
