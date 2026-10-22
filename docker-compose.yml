@@ -4,6 +4,10 @@ services:
     container_name: infisical
     labels:
       - "homelab.tier=infra"
+      - "traefik.enable=true"
+      - "traefik.http.routers.infisical.entrypoints=internal"
+      - "traefik.http.routers.infisical.rule=Host(`vault.caesura.internal`)"
+      - "traefik.http.services.infisical.loadbalancer.server.port=8080"
     restart: unless-stopped
     ports:
       - "127.0.0.1:8090:8080"
@@ -26,14 +30,10 @@ services:
       - SMTP_FROM_NAME=Infisical
     depends_on:
       - infisical-redis
-    # Pas de réseau traefik-net ici : accès direct via Tailscale uniquement.
-    # Si tu veux router via Traefik plus tard (nom court sans port), ajoute :
-    # networks:
-    #   - traefik-net
-    # labels:
-    #   - "traefik.enable=true"
-    #   - "traefik.http.routers.infisical.rule=Host(`vault.<hostname>.<tailnet>.ts.net`)"
-    #   - "traefik.http.services.infisical.loadbalancer.server.port=8080"
+    networks:
+      - default
+      - traefik-net
+    # Les ports 8090 restent publiés (accès direct par IP:port) en parallèle de vault.caesura.internal.
 
   infisical-redis:
     image: redis:7-alpine
@@ -44,6 +44,6 @@ services:
     restart: unless-stopped
     # Pas de port exposé sur l'hôte : uniquement accessible par infisical via le réseau interne du compose
 
-# networks:
-#   traefik-net:
-#     external: true
+networks:
+  traefik-net:
+    external: true

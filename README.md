@@ -36,7 +36,7 @@ flowchart LR
     internet(["Internet"])
     cf["Cloudflare Tunnel<br/>(optional, public services)"]
     subgraph pi ["Raspberry Pi 5 — Docker"]
-        traefik["Traefik :8000"]
+        traefik["Traefik :80 / :8000"]
         subgraph ci ["ci-net"]
             gitea["Gitea"]
             wps["Woodpecker Server"]
@@ -106,7 +106,7 @@ flowchart LR
 | `DB_HOST` | Connection address to the shared Postgres instance (default Docker bridge gateway, usually `172.17.0.1`; check with `docker network inspect bridge`) |
 | `ENCRYPTION_KEY` | Infisical encryption key (secrets at rest) — **critical, never lose or leak it**. Generate with `openssl rand -hex 16` |
 | `AUTH_SECRET` | Session/JWT signing secret. Generate with `openssl rand -base64 32` |
-| `INFISICAL_SITE_URL` | URL of Infisical (Tailscale address), e.g. `http://<hostname>.<tailnet>.ts.net:8090` |
+| `INFISICAL_SITE_URL` | URL of Infisical, used in email links: `http://vault.caesura.internal` (Traefik + internal DNS) or the Tailscale address `http://<hostname>.<tailnet>.ts.net:8090` |
 | `TAILSCALE_IP` | Tailscale IPv4 address of the host (`tailscale ip -4`); Infisical (`8090`) is published only on it and on localhost; also used as the SMTP host (shared Mailpit) |
 | `SMTP_FROM_ADDRESS` | *(optional)* sender address of Infisical emails (default `infisical@homelab.internal`) |
 
