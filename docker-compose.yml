@@ -17,15 +17,15 @@ services:
       - AUTH_SECRET=${AUTH_SECRET}
       - SITE_URL=${INFISICAL_SITE_URL}
       - NODE_ENV=production
-      # SMTP : Mailpit (puits local, sans authentification ni TLS)
-      - SMTP_HOST=mailpit
+      # SMTP : Mailpit mutualisé (projet mailpit/), joint via l'IP Tailscale de l'hôte
+      # (puits sans authentification ni TLS)
+      - SMTP_HOST=${TAILSCALE_IP}
       - SMTP_PORT=1025
       - SMTP_IGNORE_TLS=true
-      - SMTP_FROM_ADDRESS=${SMTP_FROM_ADDRESS:-infisical@homelab.internal}
+      - SMTP_FROM_ADDRESS=${SMTP_FROM_ADDRESS:-infisical@caesura.local}
       - SMTP_FROM_NAME=Infisical
     depends_on:
       - infisical-redis
-      - mailpit
     # Pas de réseau traefik-net ici : accès direct via Tailscale uniquement.
     # Si tu veux router via Traefik plus tard (nom court sans port), ajoute :
     # networks:
@@ -43,17 +43,6 @@ services:
     command: ["redis-server", "--save", "", "--appendonly", "no"]
     restart: unless-stopped
     # Pas de port exposé sur l'hôte : uniquement accessible par infisical via le réseau interne du compose
-
-  mailpit:
-    image: axllent/mailpit@sha256:74d609a42ec279aa63c6b4622a6fa9b5408d1ad5b1d76a1c4be40a265ce0863d  # figé le 2026-09-30
-    container_name: mailpit
-    labels:
-      - "homelab.tier=infra"
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:8025:8025"
-      - "${TAILSCALE_IP:?TAILSCALE_IP manquant dans .env}:8025:8025"
-    # SMTP interne (port 1025) consommé par infisical ; UI web (8025) accessible via Tailscale pour lire l'email de reset
 
 # networks:
 #   traefik-net:

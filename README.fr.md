@@ -11,14 +11,14 @@ Instance auto-hébergée d'[Infisical](https://infisical.com/) sur un Raspberry 
 
 ## Vue d'ensemble
 
-Trois conteneurs, réseau Docker par défaut (pas de réseau custom, pas de reverse proxy pour l'instant) :
+Deux conteneurs, réseau Docker par défaut (pas de réseau custom, pas de reverse proxy pour l'instant) :
 
 | Service | Image | Port hôte | Rôle |
 |---|---|---|---|
 | `infisical` | `infisical/infisical`, épinglée par digest | `8090` → `8080`, lié à localhost et à `TAILSCALE_IP` uniquement | Application principale |
 | `infisical-redis` | `redis:7-alpine` | *(aucun, interne uniquement)* | Cache / queue interne (persistance désactivée) |
-| `mailpit` | `axllent/mailpit`, épinglée par digest | `8025` (interface web), lié à localhost et à `TAILSCALE_IP` uniquement | Puits SMTP local (port `1025`), déjà branché sur Infisical (`SMTP_*` définies dans le compose) — permet de lire par ex. les emails de réinitialisation de mot de passe |
 
+- **Mail** : Infisical envoie ses emails (réinitialisation de mot de passe…) au **Mailpit mutualisé** (projet `mailpit/`) via l'adresse Tailscale de l'hôte (`SMTP_HOST=${TAILSCALE_IP}`, port `1025`). Le pare-feu doit autoriser le sous-réseau du bridge Docker vers `<TAILSCALE_IP>:1025`.
 - **Base de données** : PostgreSQL **mutualisé**, déjà en place sur l'hôte (pas de conteneur Postgres dédié), base (`infisical`) et user applicatif (`infisical_app`) dédiés.
   - Connexion via la passerelle du bridge Docker par défaut (pas de réseau custom, donc pas besoin d'`extra_hosts` / réseau dédié).
   - ⚠️ Une règle firewall doit autoriser le sous-réseau du bridge Docker par défaut vers le port Postgres, sinon la connexion timeout silencieusement.
@@ -43,10 +43,10 @@ flowchart LR
             wpa["Woodpecker Agent"]
         end
         plantuml["PlantUML"]
+        mailpit["Mailpit<br/>SMTP :1025 · UI :8025"]
         subgraph vault ["Infisical stack"]
             infisical["Infisical :8090"]
             redis[("Redis")]
-            mailpit["Mailpit"]
         end
     end
     pg[("PostgreSQL<br/>native, shared")]
@@ -57,12 +57,13 @@ flowchart LR
     gitea <-->|OAuth2| wps
     wps -->|"gRPC :9000"| wpa
     gitea & wps & infisical --> pg
-    infisical --> redis & mailpit
+    infisical --> redis
+    infisical & gitea --> mailpit
     client -->|"Tailscale"| infisical
     infisical -.->|"secrets at deploy time"| ci
 
     classDef current fill:#fff3b0,stroke:#d97706,stroke-width:3px,color:#000
-    class infisical,redis,mailpit current
+    class infisical,redis current
 ```
 
 ## Choix de conception
@@ -106,7 +107,7 @@ flowchart LR
 | `ENCRYPTION_KEY` | Clé de chiffrement Infisical (secrets au repos) — **critique, ne jamais perdre ni faire fuiter**. Génération : `openssl rand -hex 16` |
 | `AUTH_SECRET` | Secret de signature des sessions/JWT. Génération : `openssl rand -base64 32` |
 | `INFISICAL_SITE_URL` | URL d'accès à Infisical (adresse Tailscale), ex. `http://<hostname>.<tailnet>.ts.net:8090` |
-| `TAILSCALE_IP` | Adresse IPv4 Tailscale de l'hôte (`tailscale ip -4`) ; Infisical (`8090`) et Mailpit (`8025`) ne sont publiés que sur elle et sur localhost |
+| `TAILSCALE_IP` | Adresse IPv4 Tailscale de l'hôte (`tailscale ip -4`) ; Infisical (`8090`) n'est publié que sur elle et sur localhost ; elle sert aussi d'hôte SMTP (Mailpit mutualisé) |
 | `SMTP_FROM_ADDRESS` | *(optionnel)* adresse d'expéditeur des emails d'Infisical (défaut `infisical@homelab.internal`) |
 
 ## Procédures courantes
@@ -123,7 +124,7 @@ Les projets s'authentifient avec une **Machine Identity** (Universal Auth) et la
 ## Notes de sécurité
 
 - Ne jamais perdre `ENCRYPTION_KEY` / `AUTH_SECRET` (voir TODO 1) et ne jamais commiter `.env`.
-- L'interface web de Mailpit affiche tous les emails envoyés par Infisical (liens de réinitialisation inclus) : la laisser accessible uniquement via Tailscale.
+- Les emails d'Infisical (liens de réinitialisation inclus) arrivent dans le Mailpit mutualisé : laisser son interface web accessible uniquement via Tailscale (voir le projet `mailpit/`).
 
 ## Points de vigilance / TODO
 
